@@ -9,8 +9,8 @@
     {
       "name": "vibe-guard",
       "source": "./plugins/vibe-guard",
-      "description": "Audits your app for exposed secrets, missing RLS, unprotected API routes, and other launch-blocking security gaps. Blocks hardcoded API keys before they are written to disk.",
-      "version": "0.1.0",
+      "description": "Audits your app for exposed secrets, missing RLS, unprotected API routes and other launch-blocking gaps, generates the RLS and auth fixes, and blocks hardcoded API keys before they are written to disk.",
+      "version": "0.2.0",
       "author": {
         "name": "Lucas Carvalho"
       },

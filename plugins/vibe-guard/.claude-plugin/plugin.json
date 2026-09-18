@@ -1,8 +1,8 @@
 {
   "name": "vibe-guard",
   "displayName": "VibeGuard",
-  "version": "0.1.0",
-  "description": "Security and robustness toolkit for vibecoders: audits your app for exposed secrets, missing RLS, unprotected API routes, and weak deploy hygiene, and blocks hardcoded API keys before they hit your files.",
+  "version": "0.2.0",
+  "description": "Security toolkit for people who ship fast with AI: audits your app, locks down Supabase RLS, sets up authentication that holds, runs the pre-launch checklist, and blocks hardcoded API keys before they reach your files.",
   "author": {
     "name": "Lucas Carvalho",
     "url": "https://github.com/carvalhxlucas"
