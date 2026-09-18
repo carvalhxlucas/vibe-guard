@@ -1,0 +1,14 @@
+{
+  "name": "vibe-guard",
+  "displayName": "VibeGuard",
+  "version": "0.1.0",
+  "description": "Security and robustness toolkit for vibecoders: audits your app for exposed secrets, missing RLS, unprotected API routes, and weak deploy hygiene, and blocks hardcoded API keys before they hit your files.",
+  "author": {
+    "name": "Lucas Carvalho",
+    "url": "https://github.com/carvalhxlucas"
+  },
+  "homepage": "https://github.com/carvalhxlucas/vibe-guard",
+  "repository": "https://github.com/carvalhxlucas/vibe-guard",
+  "license": "MIT",
+  "keywords": ["security", "audit", "secrets", "supabase", "rls", "nextjs", "vercel"]
+}
