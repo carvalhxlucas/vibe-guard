@@ -1,6 +1,6 @@
 ---
 name: rls-check
-description: Inspects the live Supabase/Postgres database for tables that are reachable with the public anon key but have Row Level Security off, missing policies, or a policy that allows everything — then generates the RLS migration to fix it. Use when the user asks about RLS, Row Level Security, "can other users see my data", "is my Supabase locked down", "my table returns empty results", "generate policies", or after a security-audit flags RLS. Also use before a first launch on any Supabase project.
+description: Inspects the live Supabase/Postgres database for tables reachable with the public anon key that have Row Level Security off, no policies, or a policy allowing everything — then generates the RLS migration to fix it. Use when someone asks about RLS or Row Level Security, or describes the symptom without the term: "can other users see my data", "someone told me anyone can read my database", "my key is in the frontend, is that bad", "is my Supabase locked down", "my table suddenly returns empty results", "generate policies for my schema". Also use before a first launch on any Supabase project, and whenever a security audit flags RLS.
 ---
 
 # RLS check

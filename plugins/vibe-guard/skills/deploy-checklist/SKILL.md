@@ -1,6 +1,6 @@
 ---
 name: deploy-checklist
-description: Runs the pre-launch pass before an app goes live or gets shared publicly — environment variables set correctly in the host, secrets not in the bundle, HTTPS and security headers, error handling that does not leak stack traces, logs without sensitive data, database backups, spending caps on paid APIs, and the provider settings that only exist outside the repo. Use when the user says they are about to launch, deploy to production, go live, share the link, post on Product Hunt, or ask "am I ready to ship this".
+description: Runs the pre-launch pass before an app goes live or gets shared publicly — environment variables set correctly in the host, secrets kept out of the client bundle, HTTPS and security headers, error handling that does not leak stack traces, logs without sensitive data, database backups, spending caps on paid APIs, and the provider settings that exist only outside the repo. Use when someone says they are about to deploy, launch, go live, ship it, share the link, post it on Reddit or Product Hunt or Hacker News, or asks "anything I should do first", "am I ready to ship this", "what do I need to check before this goes out".
 ---
 
 # Deploy checklist

@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: Audits the current project for security and robustness problems before launch — exposed secrets, missing Supabase/Postgres Row Level Security, unprotected API routes, missing input validation and rate limiting, open CORS, missing security headers, and vulnerable dependencies. Produces a plain-language report with severities and fixes. Use when the user asks "is my app secure", "check my security", "am I ready to launch/deploy/go live", "review this before I ship", "did I leak any keys", "is my RLS set up", or after a burst of AI-generated code lands in an app that handles real user data or money.
+description: Audits a project for security and robustness problems before it meets real users — exposed secrets, missing Supabase/Postgres Row Level Security, API routes with no authorization, missing input validation and rate limiting, open CORS, missing security headers, and vulnerable dependencies. Produces a plain-language report with severities and fixes, and changes no code. Use whenever someone asks for any kind of pre-launch look over an app that will be public, however they phrase it: "is my app secure", "check my security", "did I leak any keys", "is my RLS set up", "am I ready to launch", "I want to put this online tomorrow", "real people are going to sign up", "can you look this over", "anything here going to bite me", "what am I missing before I ship". Also use after a burst of AI-generated code lands in an app that handles user data or money.
 ---
 
 # Security audit

@@ -1,6 +1,6 @@
 ---
 name: secure-auth-setup
-description: Sets up or hardens authentication so sessions, protected routes, and role checks are right the first time — Supabase Auth on Next.js primarily, plus Auth.js and Clerk. Use when the user asks to add login, signup, auth, or protected pages; when they ask "is my login secure", "how do I protect this route", "how do I check if the user is an admin"; or when a security-audit finds routes with no auth check. Also use when session bugs appear: users logged out on refresh, stale sessions, or middleware that does not protect anything.
+description: Sets up or hardens authentication so sessions, protected routes, and role checks are right the first time — Supabase Auth on Next.js primarily, plus Auth.js and Clerk. Use when someone asks to add login, signup, accounts, or protected pages; when they ask "is my login secure", "how do I protect this route", "how do I check if someone is an admin", "how do I make people sign in before they can save things"; or when an audit finds routes with no auth check. Also use for session symptoms: users logged out on refresh, stale sessions, or middleware that protects nothing.
 ---
 
 # Secure auth setup
