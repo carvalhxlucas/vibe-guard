@@ -79,7 +79,19 @@ removed, and code using them produces sessions that silently fail to refresh.
 
 ## 3. Middleware — the session refresh
 
-`middleware.ts` at the project root.
+`middleware.ts` at the project root, exporting `middleware`.
+
+**Next.js 16 renamed this file to `proxy.ts`, exporting `proxy`.** Same behaviour, same
+body, same `config.matcher` — only the file name and the exported function name change.
+Check the installed version before writing it:
+
+```bash
+node -p "require('./package.json').dependencies.next"
+```
+
+Version 16 or later gets `proxy.ts` with `export async function proxy(request: NextRequest)`.
+Version 15 and earlier gets `middleware.ts` with `export async function middleware(...)`.
+The example below shows the 15-and-earlier form.
 
 ```ts
 import { createServerClient } from '@supabase/ssr';
@@ -134,8 +146,8 @@ export const config = {
 };
 ```
 
-Middleware redirects. It does not authorize. Every route handler and server action
-still does its own `getUser()` check — middleware does not run for every data path, and
+Middleware — `proxy.ts` on Next.js 16 — redirects. It does not authorize. Every route
+handler and server action still does its own `getUser()` check — middleware does not run for every data path, and
 a matcher gap silently disables it.
 
 ---
