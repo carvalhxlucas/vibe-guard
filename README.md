@@ -190,19 +190,28 @@ claude plugin validate ./plugins/vibe-guard --strict
 
 ### Tests
 
-The hook is a plain Node script with no dependencies, so it can be driven directly:
-
 ```bash
-echo '{"tool_name":"Write","tool_input":{"file_path":"a.ts","content":"const k=\"sk_live_9fKq2LmZ7pRt4XwD\""}}' \
-  | node plugins/vibe-guard/hooks/scripts/detect-secrets.mjs; echo "exit=$?"
-# exit=2, with a deny decision on stdout
+cd tests
+npm install
+npm test
 ```
 
-Behavior of the skills is measured with [plugin evals](https://code.claude.com/docs/en/plugin-evals)
-— six cases under `plugins/vibe-guard/evals/`, covering whether each skill fires on
-realistic phrasing, whether the audit finds planted vulnerabilities without editing
-code, whether the hook stops a hardcoded key, and whether the plugin stays quiet on an
-unrelated request:
+37 checks, no network and no Postgres to install — PGlite runs Postgres 18 in wasm:
+
+- **The hook**, driven exactly as Claude Code drives it: 16 payloads covering each
+  credential family, the ask path, and the cases that must pass through untouched
+  (publishable keys, `.env` writes, placeholders, `vibeguard-ignore`).
+- **`rls-check`'s SQL**, against a real database seeded with a Supabase-shaped schema
+  that has deliberate mistakes: every statement in `introspect.sql` runs, leaking
+  tables rank above locked ones, a `using (true)` policy is counted as open, and the
+  `verify-rls.sql` pattern reports a leak as a leak while the owner still sees their
+  own row.
+- **Every SQL block in `policy-patterns.md`**, compiled against a bare schema, because
+  they are documented as copy-ready.
+
+Behavior of the skills — whether each one fires on the phrasing a real user types — is
+measured separately with [plugin evals](https://code.claude.com/docs/en/plugin-evals).
+Six cases live under `plugins/vibe-guard/evals/`:
 
 ```bash
 cd plugins/vibe-guard
