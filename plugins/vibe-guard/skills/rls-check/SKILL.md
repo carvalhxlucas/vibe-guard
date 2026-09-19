@@ -29,23 +29,31 @@ Migration files lie. Tables created in the Supabase dashboard never appear in
 `supabase/migrations/`, and RLS toggled in the dashboard UI leaves no trace in the
 repo. Always try to read the live database first.
 
-Try these in order and use the first that works:
+Try these in order and use the first that works. Check what the user actually has
+before picking — do not assume a tool is installed:
 
 ```bash
-# a. Supabase CLI linked to the project (best)
-supabase projects list 2>/dev/null && supabase db execute --file "${CLAUDE_PLUGIN_ROOT}/skills/rls-check/scripts/introspect.sql"
-
-# b. Direct connection string in the environment
-psql "$DATABASE_URL" -f "${CLAUDE_PLUGIN_ROOT}/skills/rls-check/scripts/introspect.sql"
-
-# c. Local dev database
-supabase status 2>/dev/null   # then use the printed DB URL with psql
+command -v psql supabase
 ```
 
-If none work, fall back to **paste mode**: print the contents of
-`scripts/introspect.sql`, ask the user to run it in the Supabase dashboard
-(SQL Editor → New query → paste → Run) and paste the result back. Say why it is worth
-the 30 seconds: the repo cannot tell you what the live database actually does.
+```bash
+# a. A connection string in the environment, with psql available
+psql "$DATABASE_URL" -f "${CLAUDE_PLUGIN_ROOT}/skills/rls-check/scripts/introspect.sql"
+
+# b. Local Supabase stack running — this prints the local DB URL
+supabase status
+# then: psql "<the DB URL it printed>" -f "${CLAUDE_PLUGIN_ROOT}/skills/rls-check/scripts/introspect.sql"
+
+# c. Supabase CLI linked to a remote project. The subcommand for running SQL has
+#    changed across CLI versions, so check before using it rather than guessing:
+supabase db query --help 2>/dev/null || supabase db --help
+```
+
+**Paste mode is the path that always works, and there is no shame in going straight to
+it.** Print the contents of `scripts/introspect.sql`, ask the user to run it in the
+Supabase dashboard (SQL Editor → New query → paste → Run), and paste the results back.
+Say why it is worth the 30 seconds: the repository cannot tell you what the live
+database actually does.
 
 Only if the user declines, fall back to reading `supabase/migrations/*.sql` and
 `*.sql` anywhere in the repo — and label every finding in the report as

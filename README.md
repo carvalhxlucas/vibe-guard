@@ -128,6 +128,20 @@ High-confidence matches are blocked outright. Lower-confidence ones ask you firs
 
 ---
 
+## Requirements
+
+- **Claude Code** — any recent version.
+- **Node.js** — the secret-blocking hook is a Node script with no dependencies. If
+  `node` is not on your `PATH`, the hook cannot run and the rest of the plugin still
+  works.
+- **Optional, for `rls-check` against a live database**: `psql` or the Supabase CLI.
+  Without either, the skill falls back to printing the SQL for you to paste into the
+  Supabase SQL editor, which needs nothing installed.
+
+Developed and tested on macOS. It should work anywhere Claude Code and Node do, but
+Windows is untested — if the hook misbehaves there, an issue with the output of
+`claude --debug` would help.
+
 ## Install
 
 ```shell
