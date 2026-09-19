@@ -210,16 +210,29 @@ npm test
   they are documented as copy-ready.
 
 Behavior of the skills — whether each one fires on the phrasing a real user types — is
-measured separately with [plugin evals](https://code.claude.com/docs/en/plugin-evals).
-Six cases live under `plugins/vibe-guard/evals/`:
+measured by six cases under `plugins/vibe-guard/evals/`. The tool for running them is
+[`claude plugin eval`](https://code.claude.com/docs/en/plugin-evals), which needs early
+access on your account:
 
 ```bash
 cd plugins/vibe-guard
 claude plugin eval . --scaffold --allow-tools Bash Write Edit
 ```
 
-Each case runs with and without the plugin loaded, so the score difference shows what
-the plugin actually contributes.
+Without that, `tests/run-cases.mjs` runs the same case files through `claude -p` and
+applies the graders that cost nothing to compute — `tool_used`, `regex`, `file_exists`.
+The `llm` graders are reported as skipped rather than guessed at. It calls the Claude
+CLI, so it costs about \$2.50 for a full pass:
+
+```bash
+cd tests
+node run-cases.mjs                # every case, plugin loaded
+node run-cases.mjs --case rls     # one case
+node run-cases.mjs --baseline     # also run with no plugin, for the comparison
+```
+
+Current result: all four skills fire on colloquial phrasing as their first tool call,
+and the unrelated request invokes none of them.
 
 ## Roadmap
 
