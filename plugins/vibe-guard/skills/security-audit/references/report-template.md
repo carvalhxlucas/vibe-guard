@@ -103,6 +103,10 @@ reader the scope of the audit and stops them re-auditing the same ground.>
 - **Quantify the loss when you can.** "An unauthenticated endpoint that calls GPT-4
   costs you roughly $0.03 per request; a scraper doing 10 requests/second costs
   $26/hour."
+- **For an availability finding, say who is affected and for how long.** "While that
+  request runs, the connection pool is full, so every other user gets an error — and it
+  recovers only when the caller stops." Downtime does not read as a security problem to
+  this reader unless you spell out that someone can cause it on purpose.
 - **If a finding depends on something you could not see, say so in the finding**
   rather than dropping it: "If `notes` has RLS enabled in the live database, this is
   not exploitable. Verify before dismissing."

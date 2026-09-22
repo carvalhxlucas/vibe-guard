@@ -41,9 +41,9 @@ State these to the user as you go. They are the whole reason this skill exists:
 cat package.json | rg -i 'supabase|next-auth|@auth/|clerk|lucia|passport|jsonwebtoken|bcrypt'
 fd -H 'middleware\.(ts|js)$' --max-depth 2
 fd -H 'supabase' lib utils app --max-depth 3 2>/dev/null
-rg -ln "'use client'" | xargs rg -l 'createClient|auth\.' 2>/dev/null
-rg -n 'getSession\(\)|getUser\(\)|auth\(\)|currentUser\(\)' --glob '!node_modules'
-rg -n 'localStorage|sessionStorage' --glob '!node_modules' | rg -i 'token|session|user|auth|role'
+rg -ln "'use client'" . | xargs rg -l 'createClient|auth\.' 2>/dev/null
+rg -n 'getSession\(\)|getUser\(\)|auth\(\)|currentUser\(\)' --glob '!node_modules' .
+rg -n 'localStorage|sessionStorage' --glob '!node_modules' . | rg -i 'token|session|user|auth|role'
 ```
 
 Two findings to look for immediately, because they are both critical and common:

@@ -4,6 +4,10 @@ Seven sections. Each item: what to check, how to check it, and whether it blocks
 launch. "Blocking" means real user data, real money, or the app's reputation is at
 stake on day one.
 
+Each `rg` command names a path. Ripgrep with no path searches standard input rather
+than the project, and returns nothing without an error — indistinguishable from a
+clean result.
+
 ---
 
 ## 1. Secrets and environment variables
@@ -14,9 +18,9 @@ stake on day one.
 | Every `.env` file is gitignored | **Yes** | `git ls-files \| rg '\.env'` returns nothing but `.env.example` |
 | No secret in git history | **Yes** if found | `git log --all --oneline -- '*.env*'`; also grep history for provider prefixes. A key that was ever committed must be rotated, not deleted |
 | Production env vars set in the host | **Yes** | Ask. Every key in `.env.local` must exist in Vercel → Settings → Environment Variables, scoped to Production |
-| Server secrets have no public prefix | **Yes** | `rg 'NEXT_PUBLIC_[A-Z_]*(SECRET\|SERVICE_ROLE\|PRIVATE)'` |
+| Server secrets have no public prefix | **Yes** | `rg 'NEXT_PUBLIC_[A-Z_]*(SECRET\|SERVICE_ROLE\|PRIVATE)' .` |
 | Different keys for preview and production | No | Ask. Preview deployments are public URLs — they should not hold production credentials |
-| `.env.example` documents every variable | No | Compare its keys against `rg -o 'process\.env\.[A-Z_]+' \| sort -u` |
+| `.env.example` documents every variable | No | Compare its keys against `rg -o 'process\.env\.[A-Z_]+' . \| sort -u` |
 
 Preview deployments deserve their own line: on Vercel they are publicly reachable by
 URL. If preview points at the production database, every preview URL is a door into
@@ -34,7 +38,7 @@ real user data. Ask.
 | Destructive migrations reviewed | **Yes** if present | `rg -n 'drop (table\|column)\|alter column.*type' supabase/migrations` — these are not undone by a code rollback |
 | Connection pooling for serverless | No | Serverless functions open a connection each. Use the Supabase pooler URL (port 6543) for the app, the direct URL (5432) for migrations |
 | Indexes on RLS filter columns | No | A policy on `user_id` with no index sequential-scans every query |
-| Seed and test data removed | No | `rg -in 'test@\|dummy\|lorem ipsum\|foo@bar'` in migrations and seeds |
+| Seed and test data removed | No | `rg -in 'test@\|dummy\|lorem ipsum\|foo@bar' supabase prisma db 2>/dev/null` — migrations and seeds |
 
 ---
 
@@ -42,8 +46,8 @@ real user data. Ask.
 
 | Item | Blocking | How to check |
 |---|---|---|
-| No stack traces returned to users | **Yes** | `rg -n 'error\.stack\|error\.message' --glob '!node_modules'` inside response bodies |
-| No secrets or tokens in logs | **Yes** | `rg -n 'console\.(log\|error)\(' \| rg -i 'token\|session\|password\|key\|user\b'` — Vercel logs are readable by everyone on the team and by any log drain |
+| No stack traces returned to users | **Yes** | `rg -n 'error\.stack\|error\.message' --glob '!node_modules' .` inside response bodies |
+| No secrets or tokens in logs | **Yes** | `rg -n 'console\.(log\|error)\(' . \| rg -i 'token\|session\|password\|key\|user\b'` — Vercel logs are readable by everyone on the team and by any log drain |
 | Error tracking installed | No, but close | `rg -n 'sentry\|bugsnag\|highlight\|posthog' package.json`. Without it, you find out from a user, days later |
 | Custom 404 and 500 pages | No | `fd 'not-found|error|global-error' app` |
 | Uptime check on the main URL | No | Ask. Free options exist; a down app nobody knows is down is the worst case |
@@ -66,25 +70,36 @@ that `global-error.tsx` reports somewhere.
 | `Referrer-Policy` | No | `strict-origin-when-cross-origin` |
 | CSP | No | Valuable, and it breaks sites. Ship `Content-Security-Policy-Report-Only` first |
 | Session cookie flags | **Yes** if hand-rolled | `httpOnly`, `secure`, `sameSite=lax`. Auth libraries set these correctly; hand-written `res.cookie` calls usually do not |
-| No mixed content | No | `rg -n "http://" --glob '!*.md'` minus localhost |
+| No mixed content | No | `rg -n "http://" --glob '!*.md' .` minus localhost |
 | Custom domain + certificate | No | Ask. Also check the `www`/apex redirect resolves one way |
 
 ---
 
-## 5. Cost and abuse controls
+## 5. Cost, abuse, and staying up
 
 This section is where solo founders actually get hurt. A security hole might never be
 found; an unlimited AI endpoint gets found in hours.
 
+Two different failures live here. **Cost**: someone spends your money. **Availability**:
+someone makes the app stop working for everybody, which needs no volume at all when a
+single request is expensive enough. The first rows cover cost, the last rows cover
+availability.
+
 | Item | Blocking | How to check |
 |---|---|---|
 | Hard spending cap at every paid provider | **Yes** | Ask: OpenAI, Anthropic, Twilio, and the hosting plan all support one. This is the only control that still works when the code is wrong |
-| Rate limits on expensive endpoints | **Yes** | `rg -n 'ratelimit\|arcjet\|express-rate-limit'`, cross-referenced against routes calling paid APIs |
+| Rate limits on expensive endpoints | **Yes** | `rg -n 'ratelimit\|arcjet\|express-rate-limit' .`, cross-referenced against routes calling paid APIs |
 | Auth required on AI endpoints | **Yes** | An unauthenticated AI route is a free API for everyone who finds it |
-| Upload size and type limits | No | `rg -n 'maxFileSize\|bodyParser\|sizeLimit\|multer'` |
+| Upload size and type limits | No | `rg -n 'maxFileSize\|bodyParser\|sizeLimit\|multer' .` |
 | Billing alerts | No | Ask. An alert at 2× expected spend, sent to an address you actually read |
 | Serverless function timeouts | No | `vercel.json` → `maxDuration`. A hung function billed for 300 seconds, repeatedly, adds up |
 | Bot protection on signup | No | Vercel Firewall, Cloudflare Turnstile, or the host's built-in option |
+| Shared database client, pooled port | **Yes** on serverless | `rg -n 'new PrismaClient\|new Pool\|new Client' .` inside route handlers — one per request exhausts the pool. App on the pooler (6543), migrations on 5432 |
+| Every list query has a row ceiling | **Yes** | `rg -n '\.select\(' .` and `rg -n 'findMany' .` without `limit`/`range`/`take`. Fine at 40 rows, fatal at 400,000 |
+| Request body size capped | No | `rg -n 'content-length\|sizeLimit\|bodyParser' .`. Vercel caps at 4.5MB; a cap you own survives moving host |
+| Outbound calls have a timeout | No | `rg -n 'fetch\(' . \| rg -v 'signal'`. A hung provider hangs your function for the full `maxDuration`, billed |
+| Retries bounded, with backoff | No | `rg -n -i 'retry\|backoff' .`. A tight retry loop turns their outage into yours |
+| Heavy work off the request path | No | Image, PDF, video, spreadsheet work in a handler, sized by the caller's upload. Queue it, return `202` |
 
 ---
 
@@ -94,8 +109,8 @@ Skip entirely if the app takes no money. If it does, all of these block.
 
 | Item | How to check |
 |---|---|
-| Live keys are live, test keys are gone | `rg -n 'sk_test_\|pk_test_'` — shipping test keys means no payment ever arrives |
-| Webhook signature verified | `rg -n 'constructEvent\|webhooks\.verify'`. Without it, anyone can POST "payment succeeded" and get the product free |
+| Live keys are live, test keys are gone | `rg -n 'sk_test_\|pk_test_' .` — shipping test keys means no payment ever arrives |
+| Webhook signature verified | `rg -n 'constructEvent\|webhooks\.verify' .`. Without it, anyone can POST "payment succeeded" and get the product free |
 | Webhook endpoint is idempotent | Stripe retries. Charging or provisioning twice on a retry is a support ticket at best |
 | Prices computed server-side | `rg -n 'amount\|price' app/api` — a price that arrives from the browser is a price the customer chose |
 | Entitlement checked server-side on every use | Not just at checkout. A `is_pro` flag the user can write is not an entitlement |

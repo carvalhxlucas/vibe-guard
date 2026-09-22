@@ -281,13 +281,13 @@ into a build error, which is where you want to find out.
 
 ```bash
 # No server secret behind a public prefix
-rg -n 'NEXT_PUBLIC_[A-Z_]*(SERVICE_ROLE|SECRET)'
+rg -n 'NEXT_PUBLIC_[A-Z_]*(SERVICE_ROLE|SECRET)' .
 # No service key imported from client code
-rg -ln "'use client'" | xargs rg -l 'SERVICE_ROLE|supabaseAdmin' 2>/dev/null
+rg -ln "'use client'" . | xargs rg -l 'SERVICE_ROLE|supabaseAdmin' 2>/dev/null
 # Deprecated auth helpers still installed
 rg -n '@supabase/auth-helpers' package.json
 # Server code reading the session instead of verifying the user
-rg -n 'getSession\(\)' --glob '!node_modules' --glob '!**/*client*'
+rg -n 'getSession\(\)' --glob '!node_modules' --glob '!**/*client*' .
 ```
 
 Then build once — `next build` — and grep the output bundle for the first 12 characters

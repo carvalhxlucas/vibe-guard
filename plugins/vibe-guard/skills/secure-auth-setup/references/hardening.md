@@ -11,8 +11,8 @@ because the RLS policy lets them update their own row. They set it to `admin`.
 
 **Check it:**
 ```bash
-rg -n 'is_admin|role|is_pro|plan|subscription_status' --glob '*.sql'
-rg -n "\.from\('profiles'\).*update|is_admin|role ===" --glob '!node_modules'
+rg -n 'is_admin|role|is_pro|plan|subscription_status' --glob '*.sql' .
+rg -n "\.from\('profiles'\).*update|is_admin|role ===" --glob '!node_modules' .
 ```
 Then in SQL: does any policy allow `authenticated` to update that column?
 

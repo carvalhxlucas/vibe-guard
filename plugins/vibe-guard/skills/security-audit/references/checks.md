@@ -8,6 +8,11 @@ Throughout: exclude `node_modules`, `.next`, `dist`, `build`, and lockfiles. `rg
 respects `.gitignore` by default, which is usually what you want — except in check 1,
 where ignored files still matter if they were ever committed.
 
+**Every `rg` below names a path — usually `.`** Ripgrep with no path argument searches
+standard input, not the project. Run from a tool with no terminal attached, it returns
+nothing and exits cleanly, which reads exactly like a clean result. If you write your
+own search, give it a path.
+
 ---
 
 ## Check 1 — Exposed secrets
@@ -22,13 +27,13 @@ rg -n --hidden -g '!.git' -g '!node_modules' \
   -e 'AKIA[0-9A-Z]{16}' -e 'AIza[0-9A-Za-z_-]{35}' -e 'gh[pousr]_[A-Za-z0-9]{36,}' \
   -e 'sb_secret_[A-Za-z0-9_-]{20,}' -e 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{20,}\.' \
   -e 'BEGIN [A-Z ]*PRIVATE KEY' \
-  -e '(postgres|postgresql|mysql|mongodb\+srv)://[^:]+:[^@]+@'
+  -e '(postgres|postgresql|mysql|mongodb\+srv)://[^:]+:[^@]+@' .
 
 # b. Secrets behind a public (client-bundled) prefix — the classic vibecoder mistake
-rg -n '(NEXT_PUBLIC|VITE|REACT_APP|EXPO_PUBLIC|NUXT_PUBLIC|GATSBY)_[A-Z0-9_]*(SERVICE_ROLE|SECRET|PRIVATE|PASSWORD)'
+rg -n '(NEXT_PUBLIC|VITE|REACT_APP|EXPO_PUBLIC|NUXT_PUBLIC|GATSBY)_[A-Z0-9_]*(SERVICE_ROLE|SECRET|PRIVATE|PASSWORD)' .
 
 # c. Server-only env vars read from a file that runs in the browser
-rg -ln "'use client'|\"use client\"" | xargs rg -n 'process\.env\.[A-Z_]+' 2>/dev/null \
+rg -ln "'use client'|\"use client\"" . | xargs rg -n 'process\.env\.[A-Z_]+' 2>/dev/null \
   | rg -v 'NEXT_PUBLIC_'
 
 # d. Is .env actually ignored, and was it ever committed?
@@ -69,11 +74,11 @@ valid key is Critical.
 ```bash
 # Which tables exist and how are they created?
 fd -e sql . supabase migrations 2>/dev/null || find . -name '*.sql' -not -path '*/node_modules/*'
-rg -n -i 'create table|enable row level security|create policy|force row level security' --glob '*.sql'
+rg -n -i 'create table|enable row level security|create policy|force row level security' --glob '*.sql' .
 
 # Is the client created with the anon key or the service key, and where?
-rg -n 'createClient\(' --glob '!node_modules'
-rg -n 'SERVICE_ROLE|service_role|serviceRole'
+rg -n 'createClient\(' --glob '!node_modules' .
+rg -n 'SERVICE_ROLE|service_role|serviceRole' .
 ```
 
 For each table found in migrations, check that a matching
@@ -135,10 +140,12 @@ the anon key is public — it is supposed to be public. RLS is what makes that s
 # Every server entry point
 fd 'route\.(ts|js)$' app 2>/dev/null
 fd . pages/api 2>/dev/null
-rg -ln "'use server'" 
-# Which of them check identity at all?
-rg -L -l 'getUser|getSession|auth\(\)|currentUser|verifyToken|requireUser' \
-  $(fd 'route\.(ts|js)$' app 2>/dev/null)
+rg -ln "'use server'" .
+# Which of them never check identity? That list is the finding.
+# --files-without-match, spelled out: in ripgrep `-L` means --follow, not
+# --files-without-match as it does in grep, so `rg -L -l` returns the opposite set.
+rg --files-without-match 'getUser|getSession|auth\(\)|currentUser|verifyToken|requireUser' \
+  --glob 'route.{ts,js}' --glob 'pages/api/**' --glob '!node_modules' .
 ```
 
 Read every handler that performs a write, a delete, a payment, an email send, or an
@@ -185,11 +192,11 @@ data access — each route that touches data should still confirm ownership.
 ### Detect
 
 ```bash
-rg -n 'await req\.json\(\)|request\.json\(\)|req\.body|searchParams\.get' --glob '!node_modules'
+rg -n 'await req\.json\(\)|request\.json\(\)|req\.body|searchParams\.get' --glob '!node_modules' .
 rg -n 'zod|valibot|yup|joi|@sinclair/typebox|ajv' package.json
 # Raw SQL built by concatenation or interpolation
-rg -n '(query|execute|raw|sql)\s*\(\s*[`"\x27][^`"\x27]*\$\{' --glob '!node_modules'
-rg -n 'dangerouslySetInnerHTML|innerHTML\s*=' --glob '!node_modules'
+rg -n '(query|execute|raw|sql)\s*\(\s*[`"\x27][^`"\x27]*\$\{' --glob '!node_modules' .
+rg -n 'dangerouslySetInnerHTML|innerHTML\s*=' --glob '!node_modules' .
 ```
 
 ### True positive
@@ -222,9 +229,9 @@ browser. Recompute prices server-side from your own database.
 ### Detect
 
 ```bash
-rg -n 'ratelimit|rate-limit|@upstash/ratelimit|express-rate-limit|limiter|arcjet' --glob '!node_modules'
+rg -n 'ratelimit|rate-limit|@upstash/ratelimit|express-rate-limit|limiter|arcjet' --glob '!node_modules' .
 # Endpoints that cost money or send things
-rg -ln 'openai|anthropic|resend|sendgrid|nodemailer|twilio|stripe' --glob '!node_modules'
+rg -ln 'openai|anthropic|resend|sendgrid|nodemailer|twilio|stripe' --glob '!node_modules' .
 ```
 
 Cross-reference: any route calling a paid API, sending email/SMS, creating accounts,
@@ -257,8 +264,8 @@ Twilio all support one). A cap is the only control that works when the code is w
 ### Detect
 
 ```bash
-rg -n -i 'access-control-allow-origin|cors\(|Access-Control-Allow-Credentials' --glob '!node_modules'
-rg -n 'origin:\s*(\*|true|req\.headers)' --glob '!node_modules'
+rg -n -i 'access-control-allow-origin|cors\(|Access-Control-Allow-Credentials' --glob '!node_modules' .
+rg -n 'origin:\s*[\x27"`]?(\*|true|req\.headers)' --glob '!node_modules' .
 cat vercel.json next.config.* 2>/dev/null | rg -n -A3 -i 'headers|cors'
 ```
 
@@ -288,8 +295,8 @@ origin match.
 rg -n -A10 'async headers\(\)' next.config.* 2>/dev/null
 rg -n 'headers' vercel.json netlify.toml 2>/dev/null
 rg -n 'helmet' package.json
-rg -n 'cookies\(\)\.set|res\.cookie|setHeader\(.Set-Cookie' --glob '!node_modules'
-rg -n 'http://' --glob '!node_modules' --glob '!*.md' | rg -v 'localhost|127\.0\.0\.1|schema|w3\.org|example'
+rg -n 'cookies\(\)\.set|res\.cookie|setHeader\(.Set-Cookie' --glob '!node_modules' .
+rg -n 'http://' --glob '!node_modules' --glob '!*.md' . | rg -v 'localhost|127\.0\.0\.1|schema|w3\.org|example'
 ```
 
 ### True positive
@@ -326,8 +333,8 @@ async headers() {
 
 ```bash
 npm audit --omit=dev 2>/dev/null | tail -20   # or: pnpm audit / yarn npm audit
-rg -n 'console\.(log|error)\((.*)(token|secret|key|password|session|user)' --glob '!node_modules'
-rg -n 'stack|error\.message' --glob '!node_modules' | rg -i 'json|res\.send|return Response'
+rg -n 'console\.(log|error)\((.*)(token|secret|key|password|session|user)' --glob '!node_modules' .
+rg -n 'stack|error\.message' --glob '!node_modules' . | rg -i 'json|res\.send|return Response'
 rg -n 'NODE_ENV' next.config.* 2>/dev/null
 ```
 
@@ -346,3 +353,159 @@ Transitive advisories with no reachable path from your code are Low — say why.
 `npm audit fix`, then a manual upgrade for what remains. Log an error ID, not the
 error: return `{ error: 'Something went wrong', id }` to the client and keep the detail
 server-side.
+
+---
+
+## Check 9 — Resource exhaustion and resilience
+
+The other eight checks ask "can someone take something". This one asks "can someone
+make it stop working". The attacker needs no credentials and no skill: they send a
+normal request, or the same normal request a few thousand times, and the app falls
+over for everybody.
+
+Rate limiting (check 5) is the traffic-volume half of this and is covered there. This
+check is about the requests that are expensive *one at a time* — where one caller with
+a laptop is enough.
+
+### Detect
+
+```bash
+# a. Database connections: a new client per request, or the direct port on serverless
+rg -n 'postgres(ql)?://[^ ]*:5432' --glob '!node_modules' --glob '!*.md' .
+rg -n 'new (Pool|Client)\(|new PrismaClient\(' --glob '!node_modules' .
+rg -n 'max:\s*[0-9]+|connection_limit=|pool_timeout=' --glob '!node_modules' .
+
+# b. Reads with no ceiling on how many rows come back
+rg -n '\.select\(' --glob '!node_modules' -A3 . | rg -v '\.(limit|range|single|maybeSingle)\('
+rg -n 'findMany\(' -A4 --glob '!node_modules' . | rg -v 'take:'
+rg -n -i 'select \*' --glob '!node_modules' --glob '!*.md' .
+
+# c. A query inside a loop — one request becomes N queries
+rg -n -A6 '\b(for|while)\b|\.(forEach|map)\(' --glob '!node_modules' . \
+  | rg 'await .*(\.from\(|findMany|findUnique|findFirst|\.query\()'
+
+# d. Request bodies read with no size ceiling
+rg -n 'await (req|request)\.(json|text|formData|arrayBuffer)\(\)' --glob '!node_modules' .
+rg -n 'bodyParser|sizeLimit|maxFileSize|multer|formidable|express\.json\(' --glob '!node_modules' .
+
+# e. Outbound calls with no timeout, retries with no ceiling
+rg -n 'fetch\(|axios\.(get|post|put|delete)|got\(' --glob '!node_modules' . \
+  | rg -v 'signal|timeout|AbortController|AbortSignal'
+rg -n -i 'retry|retries|maxAttempts|backoff' --glob '!node_modules' .
+
+# f. Regexes built from user input, or nested quantifiers
+rg -n 'new RegExp\(' --glob '!node_modules' .
+rg -n '\([^)]*[+*]\)[+*]' --glob '!node_modules' --glob '!*.md' .
+
+# g. Heavy work sitting directly in a request path
+rg -n 'maxDuration' vercel.json next.config.* 2>/dev/null
+rg -ln 'sharp|jimp|puppeteer|playwright|pdf-lib|pdfkit|archiver|xlsx|csv-parse|ffmpeg' \
+  --glob '!node_modules' .
+```
+
+### True positive
+
+- **A new database client per request on serverless.** `new PrismaClient()` or
+  `new Pool()` at the top of a route handler instead of a shared module-level
+  singleton, or the direct Postgres URL (port `5432`) used by the app. Each
+  invocation opens its own connection; Supabase's free tier allows about 60. A
+  traffic spike exhausts the pool and every request — including the ones already
+  paid for — fails with a connection error. Nothing is hacked; the app is simply down.
+- **A read with no row ceiling on a table that grows.** `.select('*')` on `messages`,
+  `events`, or `logs` with no `.limit()` or `.range()`, and no `where` narrowing it to
+  one owner. Fine on day one with 40 rows. At 400,000 rows the same endpoint pulls the
+  table into memory on every call.
+- **A query inside a loop.** Fetching a list, then querying once per item. Twenty
+  items is 21 round trips; the endpoint gets slower as the data grows, and each slow
+  request holds a connection the whole time.
+- **A body read with no size check.** `await req.json()` where the caller controls the
+  length, with no `Content-Length` gate — a 50MB JSON body is parsed in full before any
+  validation runs. Same for uploads accepted without a byte cap, and for deeply nested
+  JSON, which costs far more to parse than its size suggests.
+- **An outbound call with no timeout.** `fetch()` to a payment provider, an AI API, or
+  a webhook target with no `signal`. When that service hangs, your function hangs with
+  it until the platform kills it — billed for the full duration, holding a connection,
+  and returning nothing.
+- **Retries with no ceiling or no backoff.** A handler that retries a failing
+  dependency in a tight loop turns one outage into your own outage, and multiplies the
+  load on whatever already broke.
+- **A regex built from user input, or one with a nested quantifier** like
+  `(a+)+$` or `(\s*\w+)*@`, applied to a user-supplied string. Some short inputs make
+  these run effectively forever — one request pins a CPU. Email and URL validators
+  written by hand are the usual place this appears.
+- **Image, PDF, video, or spreadsheet processing directly in a request handler**, sized
+  by whatever the caller uploads. One 8000×8000 PNG is a memory spike; ten concurrent
+  ones take the instance out.
+
+### False positive
+
+- A pooled connection string (Supabase pooler on port `6543`, Neon/PgBouncer, Prisma
+  Accelerate, Drizzle over an HTTP driver) is the fix already applied — not a finding.
+  The direct URL used only by migrations or seed scripts is correct.
+- An unbounded `select` on a table that is bounded by design (settings, plans,
+  countries, feature flags) is fine. Say why you dismissed it.
+- Framework defaults that already cap things: `express.json()` defaults to 100kb,
+  Vercel caps a serverless request body at 4.5MB and function duration at
+  `maxDuration`. These bound the damage, so the finding is at most Medium — but a cap
+  that exists only because of a platform default disappears the day the app moves, so
+  it is worth one line.
+- A retry with exponential backoff and a maximum attempt count is correct engineering.
+- Regexes over a string the app itself produced, or with no nested quantifier, are not
+  in scope.
+- Work already moved off the request path — a queue, a cron job, a background
+  function, a webhook that acknowledges first and processes after — is the fix.
+
+### Severity note
+
+Whether these are High or Medium depends almost entirely on one question: **can an
+unauthenticated caller reach it?** An expensive endpoint behind a login, with a rate
+limit, used by 200 known customers, is Medium — it will hurt one day, on a Tuesday.
+The same endpoint public is High: anyone who finds the URL can take the app down for
+everyone, repeatedly, from a phone, and there is nothing to revoke afterwards.
+
+State that reasoning in the finding. It is what tells the reader which of these to fix
+tonight and which to put in next week's list.
+
+### Fix to recommend
+
+```ts
+// a. One client for the whole process, and the pooled port on serverless
+// lib/db.ts — imported everywhere, never constructed inside a handler
+export const prisma = globalThis.__prisma ?? (globalThis.__prisma = new PrismaClient());
+// DATABASE_URL  → the pooler (…pooler.supabase.com:6543) for the app
+// DIRECT_URL    → port 5432, migrations only
+
+// b. Every list read gets a ceiling, and the ceiling is yours, not the client's
+const perPage = Math.min(Number(searchParams.get('perPage') ?? 20), 100);
+const { data } = await supabase
+  .from('messages').select('id, body, created_at')   // named columns, not *
+  .eq('user_id', user.id)
+  .order('created_at', { ascending: false })
+  .range(page * perPage, page * perPage + perPage - 1);
+
+// c. One query instead of N — collect the ids, then fetch once
+const authors = await supabase.from('profiles').select().in('id', post.authorIds);
+
+// d. Refuse an oversized body before parsing it
+const len = Number(req.headers.get('content-length') ?? 0);
+if (len > 100_000) return new Response('Payload too large', { status: 413 });
+
+// e. Every outbound call gets a deadline
+const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+```
+
+Alongside the code:
+
+- **Cap the function, not just the request.** `maxDuration` in `vercel.json` set to
+  what the endpoint actually needs — 10 seconds, not the 300 the platform allows.
+- **Move heavy work off the request path.** Accept the upload, return `202`, process in
+  a background function, queue, or cron. The user gets an answer immediately and one
+  slow job cannot take the endpoint down.
+- **Validate before you do work, not after.** Check the schema and the size limits
+  first, so a malformed 10MB payload costs a `400` rather than a parse.
+- **Put a provider-level limit in front of it.** Vercel Firewall or Cloudflare rate
+  rules stop the flood before it reaches a function you are billed for. Application
+  code cannot shed load it has already been handed.
+- **Index the columns your policies and filters use.** An RLS policy on `user_id` with
+  no index sequential-scans the table on every query, which turns ordinary traffic into
+  a load problem.

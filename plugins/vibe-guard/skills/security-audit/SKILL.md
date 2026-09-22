@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: Audits a project for security and robustness problems before it meets real users — exposed secrets, missing Supabase/Postgres Row Level Security, API routes with no authorization, missing input validation and rate limiting, open CORS, missing security headers, and vulnerable dependencies. Produces a plain-language report with severities and fixes, and changes no code. Use whenever someone asks for any kind of pre-launch look over an app that will be public, however they phrase it: "is my app secure", "check my security", "did I leak any keys", "is my RLS set up", "am I ready to launch", "I want to put this online tomorrow", "real people are going to sign up", "can you look this over", "anything here going to bite me", "what am I missing before I ship". Also use after a burst of AI-generated code lands in an app that handles user data or money.
+description: Audits a project for security and robustness problems before it meets real users — exposed secrets, missing Supabase/Postgres Row Level Security, API routes with no authorization, missing input validation and rate limiting, open CORS, missing security headers, vulnerable dependencies, and the resource limits that keep one cheap request from taking the app down. Produces a plain-language report with severities and fixes, and changes no code. Use whenever someone asks for any kind of pre-launch look over an app that will be public, however they phrase it: "is my app secure", "check my security", "did I leak any keys", "is my RLS set up", "am I ready to launch", "I want to put this online tomorrow", "real people are going to sign up", "can you look this over", "anything here going to bite me", "what am I missing before I ship", "can someone take my app down", "will this fall over if it gets traffic". Also use after a burst of AI-generated code lands in an app that handles user data or money.
 ---
 
 # Security audit
@@ -44,7 +44,7 @@ described by what they look for, not by framework.
 
 ## Step 2 — Run the checks
 
-Run all eight. `references/checks.md` has the detection recipes (exact grep patterns,
+Run all nine. `references/checks.md` has the detection recipes (exact grep patterns,
 what a true positive looks like, what a false positive looks like) and the fix
 guidance for each. Read that file before starting the checks.
 
@@ -58,8 +58,9 @@ guidance for each. Read that file before starting the checks.
 | 6 | CORS | `Access-Control-Allow-Origin: *` on authenticated endpoints, or reflected origins |
 | 7 | Security headers and transport | Missing HSTS/CSP/frame protections, mixed content, cookies without `httpOnly`/`Secure`/`SameSite` |
 | 8 | Dependencies and error hygiene | Known-vulnerable packages, stack traces returned to users, secrets written to logs |
+| 9 | Resource exhaustion and resilience | Requests that are expensive one at a time: a new database connection per call, reads with no row limit, a query inside a loop, bodies and uploads with no size cap, outbound calls with no timeout, a regex that hangs on a short input |
 
-Work breadth-first. Getting a shallow pass over all eight checks is worth more than an
+Work breadth-first. Getting a shallow pass over all nine checks is worth more than an
 exhaustive pass over check 1. Then go deep only on the areas that showed hits.
 
 Useful global sweeps:
@@ -85,10 +86,12 @@ damage to small apps comes from embarrassingly simple things.
 - **High** — Requires one extra step or a specific condition, but the loss is still
   severe. Examples: user-supplied ID trusted in a query (one user reads another's
   rows), no rate limit on an endpoint that costs you money per call, secret in git
-  history that is still valid.
+  history that is still valid, a public endpoint one caller can make expensive enough
+  to take the app down for everyone.
 - **Medium** — Real but bounded, or needs an unlikely precondition. Examples: missing
   security headers, verbose error messages exposing stack traces, dependency
-  vulnerability with no exploit path in your usage.
+  vulnerability with no exploit path in your usage, an expensive endpoint that is
+  behind a login and rate limited but still unbounded.
 - **Low** — Hygiene. Worth fixing, nothing burns if you do it next week.
 
 When you cannot tell whether a finding is Critical or High, say so in one line and

@@ -37,7 +37,7 @@ detection command for each item. Work through them in order:
 2. Database (backups, RLS, connection limits)
 3. Errors, logging, and monitoring
 4. Transport, headers, and cookies
-5. Cost and abuse controls
+5. Cost, abuse, and staying up
 6. Payments (skip if none)
 7. Data, privacy, and the legal minimum
 
