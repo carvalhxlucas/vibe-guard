@@ -1,5 +1,7 @@
 # VibeGuard
 
+*[English](README.md) · [Português](README.pt-BR.md)*
+
 **Security guardrails for people who ship fast with AI.**
 
 You built the thing in a weekend. It works. Real people are about to put their email
@@ -19,8 +21,8 @@ agent, and a hook that never sleeps.
 ## Why this exists
 
 AI coding tools are very good at making things work and completely indifferent to
-whether they are safe. The same six problems show up in almost every app built this
-way:
+whether they are safe. The same seven problems show up in almost every app built
+this way:
 
 | The problem | What actually happens |
 |---|---|
@@ -30,6 +32,7 @@ way:
 | No input validation, no rate limits | A TypeScript type is not validation — types disappear at runtime. An unauthenticated endpoint that calls an AI API is a bill waiting to happen. |
 | CORS wide open | `Access-Control-Allow-Origin: *` plus credentials lets any website make requests as your logged-in users. |
 | No deploy hygiene | Stack traces shown to users, secrets in logs, missing HTTPS headers, `.env` committed months ago and still valid. |
+| One request can take the app down | A query with no `limit` on a table that grew, a database connection opened per request, a 50MB body parsed before anything validates it. No volume needed — the app is simply unavailable, for everybody, whenever someone feels like it. |
 
 None of these require a skilled attacker. They require someone curious with browser
 dev tools open.
@@ -45,9 +48,11 @@ works anywhere. No security background assumed.
 
 ### 🔍 `/vibe-guard:security-audit` — find out what is wrong
 
-Scans the project across eight areas and writes `SECURITY-AUDIT.md`: exposed secrets,
+Scans the project across nine areas and writes `SECURITY-AUDIT.md`: exposed secrets,
 RLS, API route authorization, input validation, rate limiting, CORS, security headers,
-dependencies and error hygiene.
+dependencies and error hygiene, and resource exhaustion — unbounded queries, a
+connection per request, uncapped bodies and uploads, outbound calls with no timeout,
+a regex that hangs on a short input.
 
 Every finding gets a severity and four fields — **what it is** in plain language,
 **why it matters** in terms of your app, **where** (`file:line`, secrets redacted), and
@@ -82,7 +87,9 @@ leak which emails are registered, and OAuth redirects that are not open redirect
 Most launch risk is not in your code — it is in the Vercel dashboard, the Supabase
 settings, and your Stripe account. This walks seven sections (secrets, database,
 errors and monitoring, transport, cost controls, payments, privacy), clearly separating
-**what it verified in the code** from **what only you can confirm in a dashboard**.
+**what it verified in the code** from **what only you can confirm in a dashboard** —
+including the cost and availability controls: spending caps, rate limits, a pooled
+database connection, function timeouts.
 
 Ends with the rollback plan, because knowing how to undo the deploy matters more at 2am
 than any checklist item.
@@ -90,8 +97,10 @@ than any checklist item.
 ### 🤖 `security-reviewer` agent — review a diff
 
 A read-only reviewer for a branch or PR. Only security, only what changed, no style
-notes and no padding. A diff with nothing security-relevant gets "No security findings"
-and a one-line scope statement.
+notes and no padding. Availability counts as security here: a new query with no row
+limit, or a `fetch` with no timeout, gets flagged when a stranger can reach it. A
+diff with nothing security-relevant gets "No security findings" and a one-line
+scope statement.
 
 ```shell
 > use the security-reviewer agent on my current branch
@@ -165,7 +174,7 @@ say:
 
 | You say | What runs |
 |---|---|
-| "is this safe to launch?" · "did I leak any keys?" | `security-audit` |
+| "is this safe to launch?" · "did I leak any keys?" · "can someone take my app down?" | `security-audit` |
 | "can other users see my data?" · "is my Supabase locked down?" | `rls-check` |
 | "add login to my app" · "how do I protect this route?" | `secure-auth-setup` |
 | "I'm deploying tonight, anything I should check?" | `deploy-checklist` |
